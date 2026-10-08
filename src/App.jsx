@@ -1,21 +1,46 @@
-import React from 'react'
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+} from "react-router-dom";
 
-const App = () => {
+import Navbar from "./components/Navbar";
+import Home from "./pages/Home";
+import LostItems from "./pages/LostItems";
+import FoundItems from "./pages/FoundItems";
+import ReportItem from "./pages/ReportItem";
+import ItemDetails from "./pages/ItemDetails";
+
+function App() {
   return (
-    <main>
+    <BrowserRouter>
+      <Navbar />
 
-      <div className="Pattern" />
+      <Routes>
+        <Route path="/" element={<Home />} />
 
-      <div className="Wrapper">
-        <header>
-          <h1>
-            Find Your Lost <span className="text-gradient">Items</span> from VIT Campus
-          </h1>
-        </header>
-      </div>
+        <Route
+          path="/lost"
+          element={<LostItems />}
+        />
 
-    </main>
-  )
+        <Route
+          path="/found"
+          element={<FoundItems />}
+        />
+
+        <Route
+          path="/report"
+          element={<ReportItem />}
+        />
+
+        <Route
+          path="/items/:id"
+          element={<ItemDetails />}
+        />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;
