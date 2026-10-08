@@ -13,6 +13,8 @@ import ReportItem from "./pages/ReportItem";
 import ItemDetails from "./pages/ItemDetails";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import FoundItemDetails from "./pages/FoundItemDetails";
 
 function App() {
   return (
@@ -50,6 +52,16 @@ function App() {
         <Route
           path="/register"
           element={<Register />}
+        />
+
+        <Route
+          path="/dashboard"
+          element={<Dashboard />}
+        />
+
+        <Route
+          path="/found/:id"
+          element={<FoundItemDetails />}
         />
       </Routes>
     </BrowserRouter>
