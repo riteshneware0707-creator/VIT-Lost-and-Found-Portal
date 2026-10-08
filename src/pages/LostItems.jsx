@@ -1,32 +1,26 @@
 import { useEffect, useState } from "react";
 import ItemCard from "../components/ItemCard";
-import defaultItems from "../data/items";
+import { getItems } from "../utils/api";
 
 function LostItems() {
-  const [items, setItems] = useState(defaultItems);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("lostFoundItems");
-
-      if (stored) {
-        const parsed = JSON.parse(stored);
-
-        if (Array.isArray(parsed)) {
-          setItems(parsed);
-        }
+    async function loadItems() {
+      try {
+        const data = await getItems("?type=LOST");
+        setItems(data.items);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error loading lost items:", error);
-      setItems(defaultItems);
     }
-  }, []);
 
-  const lostItems = items.filter(
-    (item) =>
-      item.type === "LOST" &&
-      item.status === "ACTIVE"
-  );
+    loadItems();
+  }, []);
 
   return (
     <main className="page">
@@ -40,16 +34,31 @@ function LostItems() {
         </div>
       </div>
 
-      {lostItems.length === 0 ? (
+      {loading && (
+        <div className="empty-state">
+          <p>Loading lost items...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="empty-state">
+          <h2>Unable to load items</h2>
+          <p>{error}</p>
+        </div>
+      )}
+
+      {!loading && !error && items.length === 0 && (
         <div className="empty-state">
           <h2>No lost items found</h2>
           <p>
             There are currently no active lost-item reports.
           </p>
         </div>
-      ) : (
+      )}
+
+      {!loading && !error && items.length > 0 && (
         <section className="items-grid">
-          {lostItems.map((item) => (
+          {items.map((item) => (
             <ItemCard
               key={item.id}
               item={item}

@@ -1,244 +1,302 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-const categories = [
-  "ID Cards",
-  "Room Keys",
-  "Calculators",
-  "Lab Equipment",
-  "Earphones",
-  "Wallets",
-];
-
-const locations = [
-  "SJT",
-  "TT",
-  "PRP",
-  "SMV",
-  "MB",
-  "GDN",
-  "CDMM",
-  "MH-A",
-  "MH-B",
-  "MH-C",
-  "MH-D",
-  "MH-E",
-  "MH-F",
-  "MH-G",
-  "MH-H",
-  "MH-I",
-  "MH-J",
-  "MH-K",
-  "MH-L",
-  "MH-M",
-  "MH-N",
-  "MH-O",
-  "MH-P",
-  "MH-Q",
-  "MH-R",
-  "MH-S",
-  "MH-T",
-  "LH-A",
-  "LH-B",
-  "LH-C",
-  "LH-D",
-  "LH-E",
-  "LH-F",
-  "LH-G",
-  "LH-H",
-  "LH-I",
-  "LH-J",
-  "Gazebo",
-  "Food Mall",
-  "DC",
-  "Central Library",
-  "Sports Complex",
-];
+import { createItem } from "../utils/api";
+import { useAuth } from "../context/AuthContext";
 
 function ReportItem() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
-  const [form, setForm] = useState({
+  const [formData, setFormData] = useState({
     type: "LOST",
     title: "",
     description: "",
     category: "ID Cards",
     location: "SJT",
-    date: new Date().toISOString().split("T")[0],
+    date: "",
   });
 
-  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  if (!isAuthenticated) {
+    return (
+      <main className="page">
+        <div className="empty-state">
+          <h2>Login required</h2>
+
+          <p>
+            You must be logged in with your VIT
+            student account to report an item.
+          </p>
+
+          <button
+            className="primary-button"
+            onClick={() => navigate("/login")}
+          >
+            Login
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   function handleChange(event) {
     const { name, value } = event.target;
 
-    setForm((previous) => ({
+    setFormData((previous) => ({
       ...previous,
       [name]: value,
     }));
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!form.title.trim() || !form.description.trim()) {
-      setMessage("Please fill in all required fields.");
-      return;
-    }
+    setError("");
+    setSuccess("");
+    setLoading(true);
 
-    const existing = JSON.parse(
-      localStorage.getItem("lostFoundItems") || "[]"
-    );
+    try {
+      await createItem(formData);
 
-    const newItem = {
-      ...form,
-      id: Date.now(),
-      title: form.title.trim(),
-      description: form.description.trim(),
-      status: "ACTIVE",
-    };
-
-    const updatedItems = [newItem, ...existing];
-
-    localStorage.setItem(
-      "lostFoundItems",
-      JSON.stringify(updatedItems)
-    );
-
-    setMessage("Item reported successfully!");
-
-    setTimeout(() => {
-      navigate(
-        form.type === "LOST"
-          ? "/lost"
-          : "/found"
+      setSuccess(
+        "Item reported successfully."
       );
-    }, 700);
+
+      setFormData({
+        type: "LOST",
+        title: "",
+        description: "",
+        category: "ID Cards",
+        location: "SJT",
+        date: "",
+      });
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <main className="page narrow-page">
-      <div className="form-header">
-        <p className="eyebrow">VIT CAMPUS</p>
-        <h1>Report an Item</h1>
-        <p>
-          Help another student recover their lost belongings.
-        </p>
+    <main className="page">
+      <div className="page-header">
+        <div>
+          <p className="eyebrow">VIT CAMPUS</p>
+
+          <h1>Report an Item</h1>
+
+          <p>
+            Report something you lost or found
+            on campus.
+          </p>
+        </div>
       </div>
 
-      <form className="report-form" onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>Report Type</label>
-
-          <div className="type-selector">
-            <label className="radio-card">
-              <input
-                type="radio"
-                name="type"
-                value="LOST"
-                checked={form.type === "LOST"}
-                onChange={handleChange}
-              />
-              <span>🔍 Lost Item</span>
-            </label>
-
-            <label className="radio-card">
-              <input
-                type="radio"
-                name="type"
-                value="FOUND"
-                checked={form.type === "FOUND"}
-                onChange={handleChange}
-              />
-              <span>📦 Found Item</span>
-            </label>
+      <form
+        className="report-form"
+        onSubmit={handleSubmit}
+      >
+        {error && (
+          <div className="form-error">
+            {error}
           </div>
+        )}
+
+        {success && (
+          <div className="form-success">
+            {success}
+          </div>
+        )}
+
+        <div className="form-group">
+          <label htmlFor="type">
+            Report Type
+          </label>
+
+          <select
+            id="type"
+            name="type"
+            value={formData.type}
+            onChange={handleChange}
+          >
+            <option value="LOST">
+              I lost something
+            </option>
+
+            <option value="FOUND">
+              I found something
+            </option>
+          </select>
         </div>
 
         <div className="form-group">
-          <label htmlFor="title">Item Title *</label>
+          <label htmlFor="title">
+            Item Name
+          </label>
 
           <input
             id="title"
             name="title"
             type="text"
-            placeholder="e.g. Black Casio Calculator"
-            value={form.title}
+            placeholder="Example: Black Casio Calculator"
+            value={formData.title}
             onChange={handleChange}
+            required
           />
         </div>
 
         <div className="form-group">
           <label htmlFor="description">
-            Description *
+            Description
           </label>
 
           <textarea
             id="description"
             name="description"
-            rows="5"
-            placeholder="Describe the item and any useful identifying details..."
-            value={form.description}
+            placeholder="Describe the item..."
+            value={formData.description}
             onChange={handleChange}
+            rows="5"
+            required
           />
         </div>
 
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="category">Category</label>
+        <div className="form-group">
+          <label htmlFor="category">
+            Category
+          </label>
 
-            <select
-              id="category"
-              name="category"
-              value={form.category}
-              onChange={handleChange}
-            >
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            id="category"
+            name="category"
+            value={formData.category}
+            onChange={handleChange}
+          >
+            <option value="ID Cards">
+              ID Cards
+            </option>
 
-          <div className="form-group">
-            <label htmlFor="location">Location</label>
+            <option value="Room Keys">
+              Room Keys
+            </option>
 
-            <select
-              id="location"
-              name="location"
-              value={form.location}
-              onChange={handleChange}
-            >
-              {locations.map((location) => (
-                <option key={location} value={location}>
-                  {location}
-                </option>
-              ))}
-            </select>
-          </div>
+            <option value="Calculators">
+              Calculators
+            </option>
+
+            <option value="Lab Equipment">
+              Lab Equipment
+            </option>
+
+            <option value="Earphones">
+              Earphones
+            </option>
+
+            <option value="Wallets">
+              Wallets
+            </option>
+          </select>
         </div>
 
         <div className="form-group">
-          <label htmlFor="date">Date</label>
+          <label htmlFor="location">
+            Location
+          </label>
+
+          <select
+            id="location"
+            name="location"
+            value={formData.location}
+            onChange={handleChange}
+          >
+            <option value="SJT">SJT</option>
+            <option value="TT">TT</option>
+            <option value="PRP">PRP</option>
+            <option value="SMV">SMV</option>
+            <option value="MB">MB</option>
+            <option value="GDN">GDN</option>
+            <option value="CDMM">CDMM</option>
+
+            <option value="MH-A">MH-A</option>
+            <option value="MH-B">MH-B</option>
+            <option value="MH-C">MH-C</option>
+            <option value="MH-D">MH-D</option>
+            <option value="MH-E">MH-E</option>
+            <option value="MH-F">MH-F</option>
+            <option value="MH-G">MH-G</option>
+            <option value="MH-H">MH-H</option>
+            <option value="MH-I">MH-I</option>
+            <option value="MH-J">MH-J</option>
+            <option value="MH-K">MH-K</option>
+            <option value="MH-L">MH-L</option>
+            <option value="MH-M">MH-M</option>
+            <option value="MH-N">MH-N</option>
+            <option value="MH-O">MH-O</option>
+            <option value="MH-P">MH-P</option>
+            <option value="MH-Q">MH-Q</option>
+            <option value="MH-R">MH-R</option>
+            <option value="MH-S">MH-S</option>
+            <option value="MH-T">MH-T</option>
+
+            <option value="LH-A">LH-A</option>
+            <option value="LH-B">LH-B</option>
+            <option value="LH-C">LH-C</option>
+            <option value="LH-D">LH-D</option>
+            <option value="LH-E">LH-E</option>
+            <option value="LH-F">LH-F</option>
+            <option value="LH-G">LH-G</option>
+            <option value="LH-H">LH-H</option>
+            <option value="LH-I">LH-I</option>
+            <option value="LH-J">LH-J</option>
+
+            <option value="Gazebo">
+              Gazebo
+            </option>
+
+            <option value="Food Mall">
+              Food Mall
+            </option>
+
+            <option value="DC">
+              DC
+            </option>
+
+            <option value="Central Library">
+              Central Library
+            </option>
+
+            <option value="Sports Complex">
+              Sports Complex
+            </option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="date">
+            Date
+          </label>
 
           <input
             id="date"
             name="date"
             type="date"
-            value={form.date}
+            value={formData.date}
             onChange={handleChange}
+            required
           />
         </div>
 
-        {message && (
-          <div className="form-message">
-            {message}
-          </div>
-        )}
-
-        <button className="primary-button" type="submit">
-          Submit Report
+        <button
+          type="submit"
+          className="primary-button"
+          disabled={loading}
+        >
+          {loading
+            ? "Submitting..."
+            : "Report Item"}
         </button>
       </form>
     </main>

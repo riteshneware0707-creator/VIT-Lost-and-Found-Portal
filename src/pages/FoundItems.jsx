@@ -1,23 +1,26 @@
 import { useEffect, useState } from "react";
 import ItemCard from "../components/ItemCard";
-import defaultItems from "../data/items";
+import { getItems } from "../utils/api";
 
 function FoundItems() {
   const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const stored = localStorage.getItem("lostFoundItems");
-
-    if (stored) {
-      setItems(JSON.parse(stored));
-    } else {
-      setItems(defaultItems);
+    async function loadItems() {
+      try {
+        const data = await getItems("?type=FOUND");
+        setItems(data.items);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
     }
-  }, []);
 
-  const foundItems = items.filter(
-    (item) => item.type === "FOUND" && item.status === "ACTIVE"
-  );
+    loadItems();
+  }, []);
 
   return (
     <main className="page">
@@ -25,19 +28,41 @@ function FoundItems() {
         <div>
           <p className="eyebrow">VIT CAMPUS</p>
           <h1>Found Items</h1>
-          <p>Browse belongings found across VIT campus.</p>
+          <p>
+            Browse belongings found across campus.
+          </p>
         </div>
       </div>
 
-      {foundItems.length === 0 ? (
+      {loading && (
+        <div className="empty-state">
+          <p>Loading found items...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="empty-state">
+          <h2>Unable to load items</h2>
+          <p>{error}</p>
+        </div>
+      )}
+
+      {!loading && !error && items.length === 0 && (
         <div className="empty-state">
           <h2>No found items</h2>
-          <p>There are currently no active found-item reports.</p>
+          <p>
+            There are currently no active found-item reports.
+          </p>
         </div>
-      ) : (
+      )}
+
+      {!loading && !error && items.length > 0 && (
         <section className="items-grid">
-          {foundItems.map((item) => (
-            <ItemCard key={item.id} item={item} />
+          {items.map((item) => (
+            <ItemCard
+              key={item.id}
+              item={item}
+            />
           ))}
         </section>
       )}

@@ -1,110 +1,210 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import defaultItems from "../data/items";
+import { useNavigate, useParams } from "react-router-dom";
+
+import {
+  createClaim,
+  getItem,
+} from "../utils/api";
+
+import { useAuth } from "../context/AuthContext";
 
 function ItemDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
+
+  const { isAuthenticated } = useAuth();
+
   const [item, setItem] = useState(null);
-  const [claimSent, setClaimSent] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const [claimMessage, setClaimMessage] =
+    useState("");
+
+  const [claimSent, setClaimSent] =
+    useState(false);
+
+  const [error, setError] = useState("");
+  const [claimError, setClaimError] =
+    useState("");
+
+  const [claimLoading, setClaimLoading] =
+    useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("lostFoundItems");
+    async function loadItem() {
+      try {
+        const data = await getItem(id);
 
-    const items = stored
-      ? JSON.parse(stored)
-      : defaultItems;
+        setItem(data.item);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-    const found = items.find(
-      (currentItem) =>
-        String(currentItem.id) === String(id)
-    );
-
-    setItem(found);
+    loadItem();
   }, [id]);
 
-  function handleClaim() {
-    setClaimSent(true);
+  async function handleClaim() {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+
+    setClaimError("");
+    setClaimLoading(true);
+
+    try {
+      await createClaim(
+        id,
+        claimMessage
+      );
+
+      setClaimSent(true);
+    } catch (error) {
+      setClaimError(error.message);
+    } finally {
+      setClaimLoading(false);
+    }
   }
 
-  if (!item) {
+  if (loading) {
+    return (
+      <main className="page">
+        <div className="empty-state">
+          <p>Loading item...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (error || !item) {
     return (
       <main className="page">
         <div className="empty-state">
           <h2>Item not found</h2>
-          <Link to="/">Return Home</Link>
+
+          <p>
+            {error ||
+              "This item does not exist."}
+          </p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="page narrow-page">
-      <Link className="back-link" to="/">
-        ← Back to items
-      </Link>
-
-      <article className="details-card">
-        <div className="item-card-top">
-          <span className={`badge ${item.type.toLowerCase()}`}>
+    <main className="page">
+      <div className="details-container">
+        <div className="details-header">
+          <span
+            className={`item-badge ${
+              item.type === "LOST"
+                ? "lost"
+                : "found"
+            }`}
+          >
             {item.type}
           </span>
 
-          <span className="category-badge">
-            {item.category}
-          </span>
+          <h1>{item.title}</h1>
+
+          <p>
+            {item.description}
+          </p>
         </div>
 
-        <h1>{item.title}</h1>
-
-        <p className="details-description">
-          {item.description}
-        </p>
-
-        <div className="details-info">
-          <div>
-            <strong>Location</strong>
-            <span>📍 {item.location}</span>
+        <div className="details-grid">
+          <div className="detail-card">
+            <span>Category</span>
+            <strong>
+              {item.category}
+            </strong>
           </div>
 
-          <div>
-            <strong>Date</strong>
-            <span>📅 {item.date}</span>
+          <div className="detail-card">
+            <span>Location</span>
+            <strong>
+              {item.location}
+            </strong>
           </div>
 
-          <div>
-            <strong>Status</strong>
-            <span>{item.status}</span>
+          <div className="detail-card">
+            <span>Date</span>
+            <strong>
+              {item.date}
+            </strong>
+          </div>
+
+          <div className="detail-card">
+            <span>Reported By</span>
+            <strong>
+              {item.reporter_name}
+            </strong>
           </div>
         </div>
 
-        {item.type === "FOUND" && !claimSent && (
-          <button
-            className="primary-button"
-            onClick={handleClaim}
-          >
-            This is My Item
-          </button>
-        )}
+        {item.type === "FOUND" && (
+          <div className="claim-section">
+            <h2>
+              Is this your item?
+            </h2>
 
-        {claimSent && (
-          <div className="success-box">
-            <h3>Claim request submitted</h3>
             <p>
-              Your claim has been recorded. The finder can
-              verify the ownership details before arranging
-              a handoff.
+              Submit a claim with some
+              information that can help the
+              finder verify ownership.
             </p>
-          </div>
-        )}
 
-        {item.type === "LOST" && (
-          <div className="info-box">
-            If you found this item, please contact the
-            student through the appropriate campus
-            recovery process.
+            {claimSent ? (
+              <div className="form-success">
+                Claim submitted successfully.
+                The finder can review your
+                claim.
+              </div>
+            ) : (
+              <>
+                {claimError && (
+                  <div className="form-error">
+                    {claimError}
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label htmlFor="claimMessage">
+                    Claim Message
+                  </label>
+
+                  <textarea
+                    id="claimMessage"
+                    rows="5"
+                    placeholder="Describe something about the item that only the owner would know..."
+                    value={claimMessage}
+                    onChange={(event) =>
+                      setClaimMessage(
+                        event.target.value
+                      )
+                    }
+                  />
+                </div>
+
+                <button
+                  className="primary-button"
+                  onClick={handleClaim}
+                  disabled={claimLoading}
+                >
+                  {claimLoading
+                    ? "Submitting..."
+                    : isAuthenticated
+                    ? "Submit Claim"
+                    : "Login to Claim"}
+                </button>
+              </>
+            )}
           </div>
         )}
-      </article>
+      </div>
     </main>
   );
 }

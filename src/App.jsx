@@ -5,11 +5,14 @@ import {
 } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
+
 import Home from "./pages/Home";
 import LostItems from "./pages/LostItems";
 import FoundItems from "./pages/FoundItems";
 import ReportItem from "./pages/ReportItem";
 import ItemDetails from "./pages/ItemDetails";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 function App() {
   return (
@@ -37,6 +40,16 @@ function App() {
         <Route
           path="/items/:id"
           element={<ItemDetails />}
+        />
+
+        <Route
+          path="/login"
+          element={<Login />}
+        />
+
+        <Route
+          path="/register"
+          element={<Register />}
         />
       </Routes>
     </BrowserRouter>
